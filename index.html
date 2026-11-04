@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spin Wheel Interaktif - Undian & Pilihan</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        canvas {
+            touch-action: none;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+
+    <!-- Header -->
+    <header class="bg-slate-800/80 backdrop-blur-md border-b border-slate-700/50 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 text-white p-2 rounded-xl shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid fa-dharmachakra text-xl animate-spin-slow"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg tracking-tight bg-gradient-to-r from-indigo-400 to-pink-400 bg-clip-text text-transparent">SpinWheel Pro</h1>
+                    <p class="text-xs text-slate-400">Undian & Pemilih Acak Interaktif</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="openModal('infoModal')" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center space-x-1.5">
+                    <i class="fa-solid fa-circle-question"></i>
+                    <span class="hidden sm:inline">Bantuan</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-6 w-full flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Left Column: Wheel & Controls -->
+        <div class="lg:col-span-7 flex flex-col items-center justify-center bg-slate-800/50 border border-slate-700/60 rounded-2xl p-6 shadow-xl backdrop-blur-sm relative overflow-hidden">
+            
+            <!-- Winner Notification Banner / Popup Inside Canvas Container -->
+            <div id="winnerBanner" class="absolute inset-0 bg-slate-900/90 z-20 flex flex-col items-center justify-center p-6 text-center hidden backdrop-blur-md transition-all duration-300">
+                <div class="w-20 h-20 bg-gradient-to-tr from-amber-400 to-yellow-300 rounded-full flex items-center justify-center text-slate-900 text-4xl shadow-lg shadow-yellow-500/50 mb-4 animate-bounce">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+                <span class="text-xs uppercase tracking-widest text-indigo-400 font-bold mb-1">Pemenang Terpilih!</span>
+                <h2 id="winnerText" class="text-3xl sm:text-4xl font-extrabold text-white mb-6 drop-shadow-md">Nama Pemenang</h2>
+                <div class="flex space-x-3">
+                    <button onclick="closeWinnerBanner()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 transition transform hover:-translate-y-0.5">
+                        Tutup & Lanjut
+                    </button>
+                    <button onclick="removeWinnerAndClose()" class="bg-rose-600/80 hover:bg-rose-600 text-white font-semibold px-5 py-2.5 rounded-xl shadow-lg shadow-rose-600/20 transition transform hover:-translate-y-0.5">
+                        Hapus Nama Ini
+                    </button>
+                </div>
+            </div>
+
+            <!-- Canvas Wrapper -->
+            <div class="relative w-full max-w-[420px] aspect-square flex items-center justify-center my-2">
+                <!-- Pointer -->
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2 z-10 w-8 h-10 filter drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]">
+                    <svg viewBox="0 0 32 40" class="w-full h-full fill-indigo-500 stroke-white stroke-2">
+                        <path d="M16 40 L0 10 Q16 0 32 10 Z"></path>
+                    </svg>
+                </div>
+                
+                <!-- Wheel Canvas -->
+                <canvas id="wheelCanvas" class="w-full h-full rounded-full shadow-2xl border-4 border-slate-700"></canvas>
+
+                <!-- Center Spin Button -->
+                <button onclick="startSpin()" id="centerSpinBtn" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold text-lg shadow-xl shadow-indigo-600/40 border-4 border-slate-800 flex flex-col items-center justify-center transition transform hover:scale-105 active:scale-95 z-5 cursor-pointer">
+                    <i class="fa-solid fa-play text-xl mb-0.5"></i>
+                    <span class="text-[10px] tracking-wider uppercase">SPIN</span>
+                </button>
+            </div>
+
+            <!-- Spin Controls Bar -->
+            <div class="w-full flex flex-wrap items-center justify-between gap-3 mt-6 pt-4 border-t border-slate-700/60">
+                <div class="flex items-center space-x-2 text-sm text-slate-300">
+                    <i class="fa-solid fa-users text-indigo-400"></i>
+                    <span>Total Partisipan: <strong id="participantCount" class="text-white">0</strong>/50</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="resetWheel()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-rotate-right"></i>
+                        <span>Reset Posisi</span>
+                    </button>
+                    <button onclick="startSpin()" class="bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white text-xs font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 transition transform hover:-translate-y-0.5 flex items-center space-x-2">
+                        <i class="fa-solid fa-shuffle"></i>
+                        <span>Putar Roda</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Tabs (Names, Colors, Settings) -->
+        <div class="lg:col-span-5 bg-slate-800/50 border border-slate-700/60 rounded-2xl p-5 shadow-xl backdrop-blur-sm flex flex-col h-[600px]">
+            
+            <!-- Navigation Tabs -->
+            <div class="flex items-center bg-slate-900/60 p-1.5 rounded-xl mb-4 border border-slate-700/40 text-xs font-medium">
+                <button onclick="switchTab('names')" id="tabBtn-names" class="flex-1 py-2 px-2 rounded-lg transition text-center bg-indigo-600 text-white shadow-md">
+                    <i class="fa-solid fa-list-ul mr-1"></i> Nama (<span id="tabCount">0</span>)
+                </button>
+                <button onclick="switchTab('colors')" id="tabBtn-colors" class="flex-1 py-2 px-2 rounded-lg transition text-center text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-palette mr-1"></i> Warna
+                </button>
+                <button onclick="switchTab('settings')" id="tabBtn-settings" class="flex-1 py-2 px-2 rounded-lg transition text-center text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-gears mr-1"></i> Pengaturan
+                </button>
+            </div>
+
+            <!-- Tab Content 1: Names -->
+            <div id="tabContent-names" class="flex flex-col flex-grow overflow-hidden space-y-3">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-semibold uppercase tracking-wider text-slate-400">Daftar Nama (Maksimal 50)</label>
+                    <div class="space-x-1">
+                        <button onclick="loadSampleNames()" class="text-xs bg-slate-700 hover:bg-slate-600 text-indigo-300 px-2.5 py-1 rounded-lg transition">Contoh</button>
+                        <button onclick="clearNames()" class="text-xs bg-rose-900/40 hover:bg-rose-900/60 text-rose-300 px-2.5 py-1 rounded-lg transition">Hapus Semua</button>
+                    </div>
+                </div>
+
+                <!-- Add single name input -->
+                <div class="flex space-x-2">
+                    <input type="text" id="newNameInput" placeholder="Ketik nama lalu tekan Enter..." class="bg-slate-900/80 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 flex-grow" onkeydown="if(event.key==='Enter') addName()">
+                    <button onclick="addName()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm font-semibold transition shadow-md shadow-indigo-600/20">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+
+                <!-- Textarea for Bulk edit -->
+                <div class="flex flex-col flex-grow overflow-hidden">
+                    <span class="text-[11px] text-slate-400 mb-1">Atau masukkan daftar nama (1 baris = 1 nama):</span>
+                    <textarea id="bulkNamesInput" class="w-full flex-grow bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-indigo-500 resize-none font-mono" placeholder="Budi&#10;Siti&#10;Andi&#10;Dewi" oninput="syncNamesFromTextarea()"></textarea>
+                </div>
+            </div>
+
+            <!-- Tab Content 2: Colors -->
+            <div id="tabContent-colors" class="flex flex-col flex-grow overflow-y-auto space-y-4 hidden">
+                <div>
+                    <label class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 block">Pilih Tema Warna Roda</label>
+                    <div class="grid grid-cols-2 gap-3" id="themePaletteContainer">
+                        <!-- Themes populated via JS -->
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-700/60">
+                    <label class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 block">Kustomisasi Warna Sektor Utama</label>
+                    <div class="flex items-center space-x-3 bg-slate-900/60 p-3 rounded-xl border border-slate-700/50">
+                        <input type="color" id="customColorPicker" value="#6366f1" class="w-10 h-10 rounded-lg bg-transparent cursor-pointer border-0">
+                        <div class="text-xs">
+                            <p class="font-medium text-slate-200">Warna Tambahan</p>
+                            <p class="text-slate-400">Pilih warna untuk memperkaya variasi roda otomatis.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content 3: Settings -->
+            <div id="tabContent-settings" class="flex flex-col flex-grow overflow-y-auto space-y-4 hidden">
+                <label class="text-xs font-semibold uppercase tracking-wider text-slate-400">Pengaturan Putaran & Pop-up</label>
+                
+                <div class="space-y-4 bg-slate-900/60 p-4 rounded-xl border border-slate-700/50">
+                    <div>
+                        <div class="flex justify-between text-xs mb-1.5">
+                            <span class="text-slate-300 font-medium">Durasi Putaran Roda</span>
+                            <span id="durationVal" class="text-indigo-400 font-bold">12 Detik</span>
+                        </div>
+                        <input type="range" id="spinDuration" min="3" max="30" value="12" step="1" class="w-full accent-indigo-500 cursor-pointer" oninput="updateDurationLabel(this.value)">
+                        <p class="text-[10px] text-slate-400 mt-1">Mengatur berapa lama roda berputar secara fisik di layar (3–30 detik).</p>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-700/40">
+                        <div class="flex justify-between text-xs mb-1.5">
+                            <span class="text-slate-300 font-medium">Tunda Pop-up Pemenang</span>
+                            <span id="popupDelayVal" class="text-pink-400 font-bold">0 Detik (Instan)</span>
+                        </div>
+                        <input type="range" id="popupDelay" min="0" max="5" value="0" step="0.5" class="w-full accent-pink-500 cursor-pointer" oninput="updatePopupDelayLabel(this.value)">
+                        <p class="text-[10px] text-slate-400 mt-1">Jeda waktu munculnya banner pemenang setelah roda benar-benar berhenti total.</p>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-3 border-t border-slate-700/40">
+                        <div>
+                            <p class="text-sm font-medium text-slate-200">Suara Ticking</p>
+                            <p class="text-xs text-slate-400">Bunyi klik saat roda berputar</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="soundToggle" checked class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-700/40">
+                        <div>
+                            <p class="text-sm font-medium text-slate-200">Efek Confetti</p>
+                            <p class="text-xs text-slate-400">Tampilkan konfeti saat ada pemenang</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="confettiToggle" checked class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-4 text-xs text-slate-500 border-t border-slate-800">
+        SpinWheel Pro &copy; 2026 - Aplikasi Undian Responsif & Interaktif
+    </footer>
+
+    <!-- Info Modal -->
+    <div id="infoModal" class="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button onclick="closeModal('infoModal')" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="bg-indigo-600/20 text-indigo-400 p-2.5 rounded-xl">
+                    <i class="fa-solid fa-circle-info text-xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white">Panduan Penggunaan</h3>
+            </div>
+            <div class="space-y-3 text-sm text-slate-300 leading-relaxed border-b border-slate-700/60 pb-4">
+                <p><strong>1. Menambah Nama:</strong> Masukkan maksimal 50 nama melalui kolom input satuan atau daftar teks di tab <em>Nama</em>.</p>
+                <p><strong>2. Pilihan Warna:</strong> Pilih berbagai kombinasi tema warna menarik di tab <em>Warna</em>.</p>
+                <p><strong>3. Pengaturan Spin:</strong> Atur kecepatan/durasi putaran dan suara di tab <em>Pengaturan</em>.</p>
+            </div>
+
+            <!-- Hidden Admin Rigged Section Inside Help Modal -->
+            <div class="mt-4 pt-2">
+                <div class="flex items-center justify-between cursor-pointer group" onclick="toggleAdminPanelSection()">
+                    <span class="text-xs font-semibold text-slate-400 group-hover:text-amber-400 transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-user-shield"></i>
+                        <span>Opsi Rahasia Admin</span>
+                    </span>
+                    <i id="adminPanelChevron" class="fa-solid fa-chevron-down text-xs text-slate-500 transition-transform"></i>
+                </div>
+
+                <div id="adminPanelContent" class="hidden mt-3 space-y-3 bg-slate-900/80 p-3.5 rounded-xl border border-amber-500/30">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-semibold text-amber-200 block">Mode Blokir Pemenang (Blacklist)</span>
+                            <span class="text-[10px] text-slate-400">Nama yang dipilih TIDAK AKAN terpilih/keluar</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="riggedToggle" class="sr-only peer" onchange="toggleRiggedMode(this.checked)">
+                            <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                        </label>
+                    </div>
+
+                    <div id="riggedSelectContainer" class="pt-2 border-t border-slate-800 opacity-50 pointer-events-none transition-opacity space-y-2">
+                        <label class="text-[11px] font-medium text-slate-300 block">Pilih Nama yang Dilarang Menang (Terblokir):</label>
+                        
+                        <div id="riggedNamesCheckboxes" class="max-h-32 overflow-y-auto space-y-1 pr-1 bg-slate-800/80 p-2 rounded-lg border border-slate-700">
+                            <!-- Checkboxes generated dynamically -->
+                        </div>
+
+                        <div class="mt-2 pt-2 border-t border-slate-800">
+                            <div class="flex items-center justify-between text-[11px] mb-1">
+                                <span class="text-amber-400 font-semibold">Daftar Terblokir Saat Ini:</span>
+                                <button onclick="clearRiggedQueue()" class="text-slate-400 hover:text-rose-400 text-[10px] underline">Kosongkan</button>
+                            </div>
+                            <div id="riggedQueueBadgeContainer" class="flex flex-wrap gap-1 min-h-[24px]">
+                                <span class="text-[10px] text-slate-500 italic">Belum ada nama yang diblokir</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="closeModal('infoModal')" class="mt-5 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl transition">
+                Tutup
+            </button>
+        </div>
+    </div>
+
+    <!-- Notification Toast / Custom Alert -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl shadow-2xl z-50 flex items-center space-x-3 transform translate-y-20 opacity-0 transition-all duration-300">
+        <div id="toastIcon" class="text-indigo-400 text-lg"></div>
+        <span id="toastMsg" class="text-sm font-medium">Pesan notifikasi</span>
+    </div>
+
+    <!-- Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        // --- State Management ---
+        let names = [
+            "Andi", "Budi", "Citra", "Dewi", "Eko", "Fajar", "Gita", "Hadi", "Indah", "Joko",
+            "Kartika", "Lestari", "Murtadha", "Nadia", "Oky", "Putri", "Qori", "Rian", "Sari", "Taufik",
+            "Utami", "Vina", "Wawan", "Xena", "Yusuf", "Zainal", "Ahmad", "Bagas", "Cynthia", "Dhani"
+        ];
+        let currentAngle = 0; // in radians
+        let isSpinning = false;
+        let spinDuration = 12; // seconds
+        let winnerPopupDelay = 0; // seconds delay before showing winner popup
+        let lastWinner = "";
+
+        // Color Palettes
+        const palettes = {
+            vibrant: ["#6366f1", "#ec4899", "#8b5cf6", "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#14b8a6"],
+            pastel: ["#a5b4fc", "#fbcfe8", "#c4b5fd", "#bae6fd", "#a7f3d0", "#fde68a", "#fecaca", "#ccfbf1"],
+            neon: ["#ff0055", "#00ffcc", "#ff00ff", "#ffff00", "#00ffff", "#ff5500", "#aa00ff", "#00ff55"],
+            sunset: ["#f43f5e", "#fb7185", "#f472b6", "#e879f9", "#c084fc", "#818cf8", "#60a5fa", "#38bdf8"],
+            monochrome: ["#334155", "#475569", "#64748b", "#475569", "#334155", "#1e293b", "#0f172a", "#1e293b"]
+        };
+        let activePaletteKey = 'vibrant';
+
+        // Rigged Mode Settings (Blacklist Mode: selected names CANNOT win)
+        let riggedModeEnabled = false;
+        let blacklistedNames = [];
+
+        // Audio Context for Ticking Sound
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playTickSound() {
+            const soundEnabled = document.getElementById('soundToggle').checked;
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.03);
+                
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.03);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.03);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function playWinFanfare() {
+            const soundEnabled = document.getElementById('soundToggle').checked;
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                const notes = [440, 554.37, 659.25, 880];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                        
+                        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+
+                        osc.start();
+                        osc.stop(audioCtx.currentTime + 0.3);
+                    }, idx * 120);
+                });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // --- Initialization ---
+        window.addEventListener('DOMContentLoaded', () => {
+            renderPalettes();
+            updateNamesData();
+            setupCanvasSize();
+            window.addEventListener('resize', setupCanvasSize);
+        });
+
+        let canvas, ctx;
+        function setupCanvasSize() {
+            canvas = document.getElementById('wheelCanvas');
+            ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const size = canvas.parentElement.clientWidth;
+            canvas.width = size * dpr;
+            canvas.height = size * dpr;
+            canvas.style.width = `${size}px`;
+            canvas.style.height = `${size}px`;
+            ctx.scale(dpr, dpr);
+            drawWheel();
+        }
+
+        // --- Drawing Wheel ---
+        function drawWheel() {
+            if (!canvas) return;
+            const size = canvas.clientWidth;
+            if (size <= 0) return; // Guard against zero size initialization
+            const center = size / 2;
+            const radius = Math.max(0, center - 10); // Ensure radius is never negative
+            const numSlices = names.length;
+
+            ctx.clearRect(0, 0, size, size);
+
+            if (numSlices === 0) {
+                ctx.save();
+                ctx.fillStyle = '#334155';
+                ctx.beginPath();
+                ctx.arc(center, center, radius, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '14px Inter';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText("Tambahkan nama minimal 2", center, center);
+                ctx.restore();
+                return;
+            }
+
+            const arcSize = (2 * Math.PI) / numSlices;
+            const currentColors = palettes[activePaletteKey];
+
+            for (let i = 0; i < numSlices; i++) {
+                const angle = currentAngle + i * arcSize;
+
+                // Slice Fill
+                ctx.beginPath();
+                ctx.moveTo(center, center);
+                ctx.arc(center, center, radius, angle, angle + arcSize);
+                ctx.closePath();
+                ctx.fillStyle = currentColors[i % currentColors.length];
+                ctx.fill();
+                ctx.strokeStyle = '#1e293b';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Text
+                ctx.save();
+                ctx.translate(center, center);
+                ctx.rotate(angle + arcSize / 2);
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#ffffff';
+                
+                // Adjust font size based on slice count and name length
+                let fontSize = Math.max(10, Math.min(16, 160 / numSlices));
+                ctx.font = `bold ${fontSize}px Inter`;
+
+                let displayText = names[i];
+                if (displayText.length > 15) {
+                    displayText = displayText.substring(0, 12) + '...';
+                }
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                ctx.shadowBlur = 4;
+                ctx.fillText(displayText, radius - 25, 0);
+                ctx.restore();
+            }
+
+            // Outer ring shadow and border
+            ctx.beginPath();
+            ctx.arc(center, center, radius, 0, 2 * Math.PI);
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = '#334155';
+            ctx.stroke();
+        }
+
+        // --- Spin Logic ---
+        let lastTickSlice = -1;
+
+        function startSpin() {
+            if (isSpinning) return;
+            if (names.length < 2) {
+                showToast("Tambahkan minimal 2 nama untuk memutar roda!", "fa-triangle-exclamation");
+                return;
+            }
+
+            const numSlices = names.length;
+            const arcSize = (2 * Math.PI) / numSlices;
+            
+            let targetWinnerName = null;
+
+            // Blacklist Mode Calculation
+            if (riggedModeEnabled && blacklistedNames.length > 0) {
+                const eligibleNames = names.filter(name => !blacklistedNames.includes(name));
+                
+                if (eligibleNames.length === 0) {
+                    showToast("Semua nama ada di daftar terblokir! Kosongkan sebagian.", "fa-triangle-exclamation");
+                    return;
+                }
+                
+                const randomIndex = Math.floor(Math.random() * eligibleNames.length);
+                targetWinnerName = eligibleNames[randomIndex];
+            }
+
+            isSpinning = true;
+            document.getElementById('centerSpinBtn').disabled = true;
+
+            let targetAngle;
+            // Rotasi berputar lebih banyak (8-12 kali putaran penuh)
+            let extraSpins = (Math.floor(Math.random() * 5) + 8) * 2 * Math.PI; 
+
+            if (targetWinnerName) {
+                const winningIndex = names.indexOf(targetWinnerName);
+                const targetSliceCenter = winningIndex * arcSize + arcSize / 2;
+                const normalizedCurrent = currentAngle % (2 * Math.PI);
+                const desiredFinalAngleWithinRotation = (3 * Math.PI / 2) - targetSliceCenter;
+                
+                targetAngle = currentAngle + extraSpins + ((desiredFinalAngleWithinRotation - normalizedCurrent) % (2 * Math.PI));
+                if (targetAngle - currentAngle < extraSpins) {
+                    targetAngle += 2 * Math.PI;
+                }
+            } else {
+                let randomOffset = Math.random() * 2 * Math.PI;
+                targetAngle = currentAngle + extraSpins + randomOffset;
+            }
+
+            const startTime = performance.now();
+            const duration = spinDuration * 1000;
+
+            function animateSpin(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Ease-Out Quintic (Pangkat 5): Putaran melambat secara sangat halus di akhir
+                const easeOut = 1 - Math.pow(1 - progress, 5);
+                
+                const previousAngle = currentAngle;
+                currentAngle = previousAngle + (targetAngle - previousAngle) * easeOut;
+
+                const currentSlice = Math.floor(((2 * Math.PI) - (currentAngle % (2 * Math.PI)) + (3 * Math.PI / 2)) / arcSize) % numSlices;
+                if (currentSlice !== lastTickSlice) {
+                    playTickSound();
+                    lastTickSlice = currentSlice;
+                }
+
+                drawWheel();
+
+                if (elapsed < duration) {
+                    requestAnimationFrame(animateSpin);
+                } else {
+                    currentAngle = targetAngle;
+                    drawWheel();
+
+                    isSpinning = false;
+                    document.getElementById('centerSpinBtn').disabled = false;
+                    
+                    if (winnerPopupDelay > 0) {
+                        setTimeout(() => {
+                            determineWinner();
+                        }, winnerPopupDelay * 1000);
+                    } else {
+                        determineWinner();
+                    }
+                }
+            }
+
+            requestAnimationFrame(animateSpin);
+        }
+
+        function determineWinner() {
+            const numSlices = names.length;
+            const arcSize = (2 * Math.PI) / numSlices;
+            const normalizedAngle = (2 * Math.PI - (currentAngle % (2 * Math.PI)) + (3 * Math.PI / 2)) % (2 * Math.PI);
+            const winningIndex = Math.floor(normalizedAngle / arcSize) % numSlices;
+            
+            const winner = names[winningIndex];
+            lastWinner = winner;
+
+            document.getElementById('winnerText').innerText = winner;
+            document.getElementById('winnerBanner').classList.remove('hidden');
+
+            PlayConfettiIfNeeded();
+            playWinFanfare();
+        }
+
+        function PlayConfettiIfNeeded() {
+            const confettiEnabled = document.getElementById('confettiToggle').checked;
+            if (confettiEnabled && typeof confetti === 'function') {
+                confetti({
+                    particleCount: 120,
+                    spread: 80,
+                    origin: { y: 0.6 }
+                });
+            }
+        }
+
+        function closeWinnerBanner() {
+            document.getElementById('winnerBanner').classList.add('hidden');
+        }
+
+        function removeWinnerAndClose() {
+            document.getElementById('winnerBanner').classList.add('hidden');
+            const index = names.indexOf(lastWinner);
+            if (index > -1) {
+                names.splice(index, 1);
+                updateNamesData();
+                showToast(`"${lastWinner}" berhasil dihapus dari daftar.`, "fa-trash");
+            }
+        }
+
+        function resetWheel() {
+            if (isSpinning) return;
+            currentAngle = 0;
+            drawWheel();
+            showToast("Posisi roda direset.", "fa-rotate-right");
+        }
+
+        // --- Data & UI Management ---
+        function updateNamesData() {
+            const count = names.length;
+            document.getElementById('participantCount').innerText = count;
+            document.getElementById('tabCount').innerText = count;
+
+            // Update Textarea
+            document.getElementById('bulkNamesInput').value = names.join('\n');
+
+            // Clean up blacklisted names no longer in the main list
+            blacklistedNames = blacklistedNames.filter(n => names.includes(n));
+            renderRiggedUI();
+
+            drawWheel();
+        }
+
+        function renderRiggedUI() {
+            const container = document.getElementById('riggedNamesCheckboxes');
+            const badgeContainer = document.getElementById('riggedQueueBadgeContainer');
+            if (!container || !badgeContainer) return;
+
+            container.innerHTML = '';
+            if (names.length === 0) {
+                container.innerHTML = '<span class="text-[11px] text-slate-500">Belum ada nama terdaftar.</span>';
+            } else {
+                names.forEach(name => {
+                    const isBlacklisted = blacklistedNames.includes(name);
+
+                    const label = document.createElement('label');
+                    label.className = `flex items-center justify-between text-xs p-1.5 rounded cursor-pointer transition ${isBlacklisted ? 'bg-rose-500/20 text-rose-200 font-semibold' : 'hover:bg-slate-700/50 text-slate-300'}`;
+                    label.innerHTML = `
+                        <div class="flex items-center space-x-2">
+                            <input type="checkbox" ${isBlacklisted ? 'checked' : ''} onchange="toggleNameInBlacklist('${name.replace(/'/g, "\\'")}', this.checked)" class="accent-rose-500 rounded">
+                            <span>${name}</span>
+                        </div>
+                        ${isBlacklisted ? `<span class="bg-rose-500/80 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">TERBLOKIR</span>` : ''}
+                    `;
+                    container.appendChild(label);
+                });
+            }
+
+            // Render Badges Queue
+            badgeContainer.innerHTML = '';
+            if (blacklistedNames.length === 0) {
+                badgeContainer.innerHTML = '<span class="text-[10px] text-slate-500 italic">Belum ada nama yang diblokir</span>';
+            } else {
+                blacklistedNames.forEach((name) => {
+                    const badge = document.createElement('span');
+                    badge.className = 'bg-rose-500/30 border border-rose-500/50 text-rose-200 text-[10px] font-medium px-2 py-0.5 rounded-full flex items-center space-x-1';
+                    badge.innerHTML = `
+                        <span><i class="fa-solid fa-ban text-[9px] mr-1"></i>${name}</span>
+                        <button onclick="toggleNameInBlacklist('${name.replace(/'/g, "\\'")}', false)" class="hover:text-white ml-1">
+                            <i class="fa-solid fa-xmark text-[9px]"></i>
+                        </button>
+                    `;
+                    badgeContainer.appendChild(badge);
+                });
+            }
+        }
+
+        function toggleNameInBlacklist(name, add) {
+            if (add) {
+                if (!blacklistedNames.includes(name)) {
+                    blacklistedNames.push(name);
+                }
+            } else {
+                blacklistedNames = blacklistedNames.filter(n => n !== name);
+            }
+            renderRiggedUI();
+        }
+
+        function clearRiggedQueue() {
+            blacklistedNames = [];
+            renderRiggedUI();
+            showToast("Daftar terblokir dikosongkan.", "fa-rotate-left");
+        }
+
+        function syncNamesFromTextarea() {
+            const val = document.getElementById('bulkNamesInput').value;
+            const lines = val.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+            
+            if (lines.length > 50) {
+                showToast("Maksimal hanya 50 nama yang diizinkan!", "fa-triangle-exclamation");
+                names = lines.slice(0, 50);
+            } else {
+                names = lines;
+            }
+            updateNamesData();
+        }
+
+        function addName() {
+            const input = document.getElementById('newNameInput');
+            const val = input.value.trim();
+            if (!val) return;
+
+            if (names.length >= 50) {
+                showToast("Batas maksimal 50 nama telah tercapai!", "fa-triangle-exclamation");
+                return;
+            }
+
+            names.push(val);
+            input.value = '';
+            updateNamesData();
+            showToast(`"${val}" ditambahkan ke roda.`, "fa-plus");
+        }
+
+        function clearNames() {
+            names = [];
+            updateNamesData();
+            showToast("Semua nama dihapus.", "fa-trash");
+        }
+
+        function loadSampleNames() {
+            names = [
+                "Andi", "Budi", "Citra", "Dewi", "Eko", "Fajar", "Gita", "Hadi", "Indah", "Joko",
+                "Kartika", "Lestari", "Murtadha", "Nadia", "Oky", "Putri", "Qori", "Rian", "Sari", "Taufik",
+                "Utami", "Vina", "Wawan", "Xena", "Yusuf", "Zainal", "Ahmad", "Bagas", "Cynthia", "Dhani"
+            ];
+            updateNamesData();
+            showToast("30 Contoh nama berhasil dimuat.", "fa-bolt");
+        }
+
+        // --- Palettes Rendering ---
+        function renderPalettes() {
+            const container = document.getElementById('themePaletteContainer');
+            container.innerHTML = '';
+            
+            Object.keys(palettes).forEach(key => {
+                const colors = palettes[key];
+                const isSelected = key === activePaletteKey;
+                
+                const div = document.createElement('div');
+                div.className = `cursor-pointer p-2.5 rounded-xl border flex flex-col space-y-2 transition ${isSelected ? 'border-indigo-500 bg-indigo-950/30' : 'border-slate-700/60 bg-slate-900/40 hover:border-slate-600'}`;
+                div.onclick = () => {
+                    activePaletteKey = key;
+                    renderPalettes();
+                    drawWheel();
+                };
+
+                let colorBarsHTML = `<div class="flex h-4 rounded-lg overflow-hidden shadow-inner">`;
+                colors.slice(0, 5).forEach(c => {
+                    colorBarsHTML += `<div style="background-color: ${c}" class="flex-1"></div>`;
+                });
+                colorBarsHTML += `</div>`;
+
+                div.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold capitalize text-slate-200">${key}</span>
+                        ${isSelected ? '<i class="fa-solid fa-circle-check text-indigo-400 text-xs"></i>' : ''}
+                    </div>
+                    ${colorBarsHTML}
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // --- Tabs & Settings ---
+        function switchTab(tabName) {
+            ['names', 'colors', 'settings'].forEach(t => {
+                document.getElementById(`tabContent-${t}`).classList.add('hidden');
+                document.getElementById(`tabBtn-${t}`).className = "flex-1 py-2 px-2 rounded-lg transition text-center text-slate-400 hover:text-white";
+            });
+            document.getElementById(`tabContent-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tabBtn-${tabName}`).className = 'flex-1 py-2 px-2 rounded-lg transition text-center bg-indigo-600 text-white shadow-md';
+        }
+
+        function updateDurationLabel(val) {
+            spinDuration = parseInt(val);
+            document.getElementById('durationVal').innerText = `${val} Detik`;
+        }
+
+        function updatePopupDelayLabel(val) {
+            winnerPopupDelay = parseFloat(val);
+            if (winnerPopupDelay === 0) {
+                document.getElementById('popupDelayVal').innerText = `0 Detik (Instan)`;
+            } else {
+                document.getElementById('popupDelayVal').innerText = `${val} Detik`;
+            }
+        }
+
+        function toggleAdminPanelSection() {
+            const panel = document.getElementById('adminPanelContent');
+            const chevron = document.getElementById('adminPanelChevron');
+            if (panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+                chevron.classList.add('rotate-180');
+                renderRiggedUI();
+            } else {
+                panel.classList.add('hidden');
+                chevron.classList.remove('rotate-180');
+            }
+        }
+
+        function toggleRiggedMode(enabled) {
+            riggedModeEnabled = enabled;
+            const container = document.getElementById('riggedSelectContainer');
+            if (enabled) {
+                container.classList.remove('opacity-50', 'pointer-events-none');
+                showToast("Mode Terblokir (Blacklist) Aktif!", "fa-shield-halved");
+            } else {
+                container.classList.add('opacity-50', 'pointer-events-none');
+                showToast("Mode Terblokir Dinonaktifkan.", "fa-rotate-left");
+            }
+        }
+
+        // --- Modals & Toasts ---
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        let toastTimeout;
+        function showToast(msg, iconClass) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            document.getElementById('toastIcon').innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
+            
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
